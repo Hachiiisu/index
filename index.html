@@ -240,6 +240,14 @@ html.big .stzart img{max-height:300px}
 .vl{color:var(--ink);font-size:.9rem}
 
 #big .card{max-height:96vh;overflow:auto}
+.tgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tgrid .card{padding:8px 10px 10px}
+.tgrid h2{font-size:1rem;margin:0 0 4px}
+.tgrid .cardimg{border-width:3px;border-radius:8px;margin:2px auto 6px;cursor:zoom-in}
+.tgrid .actions{margin:0}
+.tgrid .go{font-size:.9rem;padding:3px 10px;border-width:3px;box-shadow:none;min-height:0}
+.modal .bigcard{width:auto;max-width:96vw;padding:10px;overflow:visible}
+.modal .bigcard .cardimg{width:auto;max-width:100%;height:calc(100vh - 150px);min-height:300px;margin:0 auto 8px;cursor:default}
 #big svg{display:block;margin:0 auto;width:min(70vw,42vh);height:auto}
 .trow{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .trow .roomcode{text-align:left;margin:0}
@@ -836,7 +844,7 @@ function renderTeacher(){
       var ks=Object.keys(HOSTTAB).sort(numeric);
       document.getElementById('hmsg').textContent=ks.length?ks.length+' table(s) have sent a card.':'Cards appear here when a table sends one.';
       renderPhase();
-      l.innerHTML='<div class="tgrid">'+ks.map(function(k){var x=HOSTTAB[k];return '<section class="card"><h2>Table '+esc(k)+'</h2><img class="cardimg" src="'+esc(x.img||'')+'" alt="Card from table '+esc(k)+'"><div class="actions"><button type="button" class="go alt" data-act="showres" data-id="'+esc(k)+'">Show big</button></div></section>';}).join('')+'</div>';
+      l.innerHTML='<div class="tgrid">'+ks.map(function(k){var x=HOSTTAB[k];return '<section class="card"><h2>Table '+esc(k)+'</h2><img class="cardimg thumbimg" data-act="showres" data-id="'+esc(k)+'" src="'+esc(x.img||'')+'" alt="Card from table '+esc(k)+'. Press to enlarge."><div class="actions"><button type="button" class="go alt mini" data-act="showres" data-id="'+esc(k)+'">Show big</button></div></section>';}).join('')+'</div>';
     }).catch(function(){busy=false;var m=document.getElementById('hmsg');if(m)m.textContent='Cannot reach the server.';});
   }
   tick();pollT=setInterval(tick,5000);
