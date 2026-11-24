@@ -949,7 +949,7 @@ document.addEventListener('click',function(e){
   else if(act==='lprev'){LEARN.i=Math.max(0,LEARN.i-1);showStep();}
   else if(act==='reveal'){document.getElementById('lcard').classList.add('revealed');document.getElementById('pnote').hidden=false;b.hidden=true;}
   else if(act==='idea'){var p=document.getElementById('idea'+b.getAttribute('data-i'));p.hidden=!p.hidden;b.setAttribute('aria-expanded',p.hidden?'false':'true');b.textContent=p.hidden?'Show an idea':'Hide idea';}
-  else if(act==='home'){stopTimer();pollStop();LIVE=null;renderHome();}
+  else if(act==='home'){stopTimer();pollStop();if(inLive()){var lv=LIVE;LIVE=null;fetch(DB_URL.replace(/\/$/,'')+'/rooms/'+encodeURIComponent(lv.code)+'/joined/'+encodeURIComponent(lv.table)+'.json',{method:'DELETE'}).catch(function(){});}LIVE=null;renderHome();}
   else if(act==='join'){if(readRoom(false))joinRoom();}
   else if(act==='joinscreen'){renderJoin();}
   else if(act==='teacher'){if(readRoom(true))renderTeacher();}
