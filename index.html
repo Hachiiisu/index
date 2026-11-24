@@ -672,7 +672,7 @@ function present(){
 
 
 /* ---------- LIVE class mode: one card per table goes to the teacher board ---------- */
-var DB_URL=(window.GIVE_DB||(((location.search||'').match(/[?&]db=([^&]+)/)||[])[1]?decodeURIComponent((location.search.match(/[?&]db=([^&]+)/))[1]):'')||'');
+var DB_URL=(window.GIVE_DB||(((location.search||'').match(/[?&]db=([^&]+)/)||[])[1]?decodeURIComponent((location.search.match(/[?&]db=([^&]+)/))[1]):'')||'https://give-it-a-life-default-rtdb.asia-southeast1.firebasedatabase.app');
 var LIVE=null, pollT=null, HOSTTAB={}, clearArmed=false;
 function key(v){return String(v||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');}
 function db(method,p,body){
