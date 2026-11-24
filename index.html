@@ -238,6 +238,12 @@ html.big .stzart img{max-height:300px}
 .vid{position:relative;width:min(100%,560px);aspect-ratio:16/9;margin:4px auto 8px;border:4px solid var(--ink);border-radius:14px;overflow:hidden;background:#000}
 .vid video{position:absolute;inset:0;width:100%;height:100%;background:#000}
 .vl{color:var(--ink);font-size:.9rem}
+
+#big .card{max-height:96vh;overflow:auto}
+#big svg{display:block;margin:0 auto;width:min(70vw,42vh);height:auto}
+.trow{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.trow .roomcode{text-align:left;margin:0}
+.roomcode{font-family:var(--display);font-size:3.2rem;letter-spacing:.18em;text-align:center;margin:4px 0 10px;font-weight:800}
 </style>
 </head>
 <body>
@@ -474,7 +480,7 @@ function startRound(){
   ME=newMe();renderDraw();
 }
 function renderDraw(){
-  stopTimer();
+  stopTimer();SCR='draw';
   PAD={color:INK,size:14,tool:'pen',undo:[],drawing:false,last:null};
   var colors=[['#1a2230','ink'],['#f2b134','orange'],['#5aa83a','green'],['#3a8fd9','blue'],['#e04f3f','red'],['#f6c445','yellow']];
   app.innerHTML='<div class="hud"><span class="chip">Round</span><button type="button" class="tbtn" data-act="home">Exit</button></div>'+stepsHTML(0)
@@ -527,8 +533,9 @@ function setupCanvas(){
 function padSnap(){PAD.undo.push(PAD.ctx.getImageData(0,0,PAD.c.width,PAD.c.height));if(PAD.undo.length>12)PAD.undo.shift();}
 function padUndo(){var s=PAD.undo.pop();if(s)PAD.ctx.putImageData(s,0,0);}
 function padClear(){padSnap();PAD.ctx.fillStyle=PAPER;PAD.ctx.fillRect(0,0,PAD.c.width,PAD.c.height);}
-function finishDraw(){
-  stopTimer();
+function finishDraw(after){
+  if(SCR!=='draw')return;
+  SCR='drawing';stopTimer();
   ME.src=PAD.c;
   var small=document.createElement('canvas');small.width=480;small.height=360;
   small.getContext('2d').drawImage(PAD.c,0,0,480,360);
@@ -536,25 +543,26 @@ function finishDraw(){
     if(!b)return;
     if(ME.drawUrl){try{URL.revokeObjectURL(ME.drawUrl);}catch(e){}}
     ME.drawBlob=b;ME.drawUrl=URL.createObjectURL(b);
-    renderPass();
+    if(typeof after==='function'){after();}else{renderPass();}
   },'image/jpeg',0.8);
 }
 
 /* ---------- step 2: pass the phone ---------- */
 function renderPass(){
-  stopTimer();
+  stopTimer();SCR='pass';
   app.innerHTML='<div class="hud"><span class="chip">Round</span><button type="button" class="tbtn" data-act="home">Exit</button></div>'+stepsHTML(1)
    +'<section class="card"><h2>Sent! Pass the phone</h2>'
    +'<img class="thumb" src="'+ME.drawUrl+'" width="480" height="360" alt="Your drawing of '+esc(ME.thing)+'">'
    +'<p class="ask">Pass this phone to the friend on your <b>LEFT</b>. Everyone passes the same way, so the pictures make one full circle.</p>'
-   +'<p class="why">Friend: you got a new picture. Press the button when it is in your hands.</p>'
+   +(inLive()?'<p class="why">Friend: get ready. Writing starts by itself when the teacher says so.</p></section>'
+   :'<p class="why">Friend: you got a new picture. Press the button when it is in your hands.</p>'
    +'<div class="actions"><button type="button" class="go" data-act="towrite">I am the friend</button>'
-   +'<button type="button" class="go alt" data-act="backdraw">Redraw</button></div></section>';
+   +'<button type="button" class="go alt" data-act="backdraw">Redraw</button></div></section>');
 }
 
 /* ---------- step 3: friend writes ---------- */
 function renderWrite(){
-  stopTimer();
+  stopTimer();SCR='write';
   app.innerHTML='<div class="hud"><span class="chip">Round</span><button type="button" class="tbtn" data-act="home">Exit</button></div>'+stepsHTML(2)
    +'<section class="card"><h2>Friend: write one beautiful sentence</h2>'
    +'<div class="timer" id="timer"><i id="tbar"></i></div><div class="tlabel" id="tlabel" aria-hidden="true">120s</div>'
@@ -575,7 +583,14 @@ function renderWrite(){
     else{document.querySelector('[data-act="verbother"]').setAttribute('aria-pressed','true');document.getElementById('otherwrap').hidden=false;document.getElementById('otherv').value=ME.verb;}
   }
   writeCheck();
-  startTimer(120,function(){var s=document.getElementById('sen');if(!s)return;ME.sentence=s.value.trim()||'(no sentence yet)';if(!ME.verb)ME.verb=ME.action;composeCard(renderCard);});
+  startTimer(120,autoFinishWrite);
+}
+function autoFinishWrite(){
+  if(SCR!=='write')return;
+  var s=document.getElementById('sen');if(!s)return;
+  SCR='composing';
+  ME.sentence=s.value.trim()||'(no sentence yet)';if(!ME.verb)ME.verb=ME.action;
+  composeCard(renderCard);
 }
 function words(s){return s.trim().split(/\s+/).filter(Boolean);}
 function verbIn(sentence,verb){
@@ -640,7 +655,7 @@ function composeCard0(done){
   },'image/jpeg',0.85);
 }
 function renderCard(){
-  stopTimer();
+  stopTimer();SCR='card';
   var kb=Math.max(1,Math.round(ME.cardBlob.size/1024));
   app.innerHTML='<div class="hud"><span class="chip">Round</span><button type="button" class="tbtn" data-act="home">Exit</button></div>'+stepsHTML(3)
    +'<section class="card"><h2>The card</h2>'
@@ -674,26 +689,105 @@ function present(){
 /* ---------- LIVE class mode: one card per table goes to the teacher board ---------- */
 var DB_URL=(window.GIVE_DB||(((location.search||'').match(/[?&]db=([^&]+)/)||[])[1]?decodeURIComponent((location.search.match(/[?&]db=([^&]+)/))[1]):'')||'https://give-it-a-life-default-rtdb.asia-southeast1.firebasedatabase.app');
 var LIVE=null, pollT=null, HOSTTAB={}, clearArmed=false;
+var SCR='', stuT=null, stBusy=false, phT=null, JOINED={}, TS={phase:'lobby',r:0,t:0};
+var ORDER=['draw','pass','write','done'], LEN=/[?&]fast/.test(location.search)?{draw:6,pass:3,write:6}:{draw:150,pass:30,write:120};
+function inLive(){return !!(LIVE&&!LIVE.host&&LIVE.table);}
+function compact(r){var o={};Object.keys(r||{}).forEach(function(k){if(r[k])o[k]=r[k];});return o;}
+function numeric(a,b){return a.localeCompare(b,undefined,{numeric:true});}
+function fmt(n){var m=Math.floor(n/60),q=n%60;return m+':'+(q<10?'0':'')+q;}
 function key(v){return String(v||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');}
+var ROOMQ='';try{ROOMQ=key(decodeURIComponent((location.search.match(/[?&]room=([^&]+)/)||[])[1]||''));}catch(e){}
 function db(method,p,body){
   var u=DB_URL.replace(/\/$/,'')+'/rooms/'+encodeURIComponent(LIVE.code)+p+'.json';
   var o={method:method};
   if(body!==undefined){o.headers={'Content-Type':'application/json'};o.body=JSON.stringify(body);}
   return fetch(u,o).then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.json();});
 }
-function pollStop(){if(pollT){clearInterval(pollT);pollT=null;}}
+function newRoom(){
+  var A='abcdefghjkmnpqrstuvwxyz23456789',tries=0;
+  function make(){var c='',i;for(i=0;i<4;i++)c+=A.charAt(Math.floor(Math.random()*A.length));return c;}
+  function go(){
+    LIVE={code:make(),table:'',host:true};tries++;
+    db('GET','').then(function(r){if(r&&tries<6)go();else renderTeacher();}).catch(function(){renderTeacher();});
+  }
+  go();
+}
+function codeBig(){return '<div class="roomcode" aria-label="Room code">'+esc(LIVE.code.toUpperCase())+'</div>';}
+function stuStop(){if(stuT){clearInterval(stuT);stuT=null;}}
+function pollStop(){if(pollT){clearInterval(pollT);pollT=null;}if(phT){clearInterval(phT);phT=null;}stuStop();}
+function stuStart(){stuStop();stuT=setInterval(stuTick,1500);stuTick();}
+function stuTick(){
+  if(!inLive()||stBusy)return;stBusy=true;
+  db('GET','/state').then(function(st){stBusy=false;if(inLive())onState(st||{phase:'lobby',r:0});})
+   .catch(function(){stBusy=false;var m=document.getElementById('waitmsg');if(m)m.textContent='Cannot reach the server. Check Wi-Fi.';});
+}
+function onState(st){
+  var ph=st.phase,r=st.r||0;
+  if(SCR==='wait'){
+    if(ph==='draw'&&r!==LIVE.r){LIVE.r=r;startRound();}
+  }else if(LIVE.r===r){
+    if(ph==='pass'&&SCR==='draw'){finishDraw();}
+    else if(ph==='write'){
+      if(SCR==='draw'){finishDraw(function(){renderPass();renderWrite();});}
+      else if(SCR==='pass'){renderWrite();window.scrollTo(0,0);}
+    }else if(ph==='done'&&SCR==='write'){autoFinishWrite();}
+  }
+}
+function joinRoom(){
+  var m=document.getElementById('livemsg');if(m)m.textContent='Joining\u2026';
+  LIVE.r=-1;
+  db('PUT','/joined/'+LIVE.table,{t:Date.now()}).then(function(){renderWait();stuStart();})
+   .catch(function(){if(m)m.textContent='Cannot reach the server. Check Wi-Fi, or press Just draw below.';});
+}
+function renderWait(note){
+  stopTimer();SCR='wait';
+  app.innerHTML=hudHTML()
+   +'<section class="card"><h2>You are in!</h2><p class="th">Room <b>'+esc(LIVE.code.toUpperCase())+'</b> \u00b7 Table <b>'+esc(LIVE.table)+'</b></p>'
+   +'<p class="ask">'+(note||'Waiting for the teacher to start the round\u2026')+'</p>'
+   +'<p class="why">Keep this screen open. Everything starts by itself.</p><p class="th" id="waitmsg" aria-live="polite"></p></section>';
+  window.scrollTo(0,0);
+}
+function setPhase(ph,r){TS={phase:ph,r:r,t:Date.now()};db('PUT','/state',TS).catch(function(){});renderPhase();}
+function nextPhase(){
+  var i=ORDER.indexOf(TS.phase);
+  if(TS.phase==='lobby')setPhase('draw',(TS.r||0)+1);
+  else if(i>=0&&i<ORDER.length-1)setPhase(ORDER[i+1],TS.r);
+}
+function phaseLeft(){return LEN[TS.phase]?Math.max(0,LEN[TS.phase]-Math.floor((Date.now()-TS.t)/1000)):0;}
+function phaseTick(){
+  if(!LEN[TS.phase])return;
+  if(Date.now()-TS.t>=LEN[TS.phase]*1000){nextPhase();return;}
+  var c=document.getElementById('phC');if(c)c.textContent=fmt(phaseLeft());
+}
+function renderPhase(){
+  var T=document.getElementById('phT');if(!T)return;
+  var ph=TS.phase,nJ=Object.keys(JOINED).length,nC=Object.keys(HOSTTAB).length;
+  var info={
+    lobby:['Lobby','Tables joined: '+nJ+(nJ?' ('+Object.keys(JOINED).sort(numeric).join(', ')+')':'')+'. Press Start when every table is in.'],
+    draw:['1 \u00b7 DRAW','Draw your thing as a little character showing its human action or feeling. Add a tiny scene. Do not tell your friend anything.'],
+    pass:['2 \u00b7 PASS','Pass the phone to your friend on the LEFT. Friend: get ready to write!'],
+    write:['3 \u00b7 WRITE','Friend: write ONE sentence in your own words. Use a human word.'],
+    done:['4 \u00b7 CARD','Time is up! Make your card, then press Send to teacher. Cards received: '+nC]
+  }[ph]||['',''];
+  T.textContent=info[0];document.getElementById('phD').textContent=info[1];
+  var c=document.getElementById('phC');c.hidden=!LEN[ph];if(LEN[ph])c.textContent=fmt(phaseLeft());
+  document.getElementById('phA').innerHTML=ph==='lobby'?'<button type="button" class="go" data-act="phnext">Start round</button>'
+    :ph==='done'?'<button type="button" class="go" data-act="phlobby">New round</button>'
+    :'<button type="button" class="go alt" data-act="phnext">Skip \u203a</button>';
+}
 function liveCard(){
   return '<section class="card"><h2>Class mode</h2>'
    +(DB_URL?'':'<p class="why">Not connected yet. Add the Firebase link to the game link (?db=...) to turn this on.</p>')
    +'<p class="th">Everyone draws. One card per table goes to the teacher’s screen.</p>'
-   +'<label class="capl" for="room">Room code</label><input id="room" class="sen" style="margin:4px 0 8px" maxlength="12" autocomplete="off">'
+   +'<label class="capl" for="room">Room code</label><input id="room" class="sen" style="margin:4px 0 8px" maxlength="12" autocomplete="off" value="'+esc(ROOMQ)+'">'
    +'<label class="capl" for="tbl">Table (for example 1, 2, 3)</label><input id="tbl" class="sen" style="margin:4px 0 8px" maxlength="8" autocomplete="off">'
-   +'<div class="actions"><button type="button" class="go" data-act="join">Join my table</button><button type="button" class="go alt" data-act="teacher">Teacher board</button></div>'
+   +'<div class="actions"><button type="button" class="go" data-act="join">Join my table</button></div>'
    +'<p class="th" id="livemsg" aria-live="polite"></p></section>';
 }
 function renderJoin(){
   stopTimer();pollStop();
   app.innerHTML='<div class="hud"><span class="chip">Play</span><button type="button" class="tbtn" data-act="home">Exit</button></div>'+liveCard()
+   +(ROOMQ?'':'<section class="card"><h2>Teacher</h2><p class="why">Start a new room. Students scan the QR or type the room code.</p><div class="actions"><button type="button" class="go" data-act="newroom">Create room</button><button type="button" class="go alt" data-act="teacher">Reopen room</button></div><p class="th">Reopen: type the room code above first.</p></section>')
    +'<section class="card"><h2>No class server?</h2><p class="why">Just draw and pass the phone to a friend at your table.</p><div class="actions"><button type="button" class="go alt" data-act="start">Just draw</button></div></section>';
   window.scrollTo(0,0);
 }
@@ -722,19 +816,26 @@ function sendToTeacher(){
 }
 function renderTeacher(){
   stopTimer();pollStop();clearArmed=false;
+  TS={phase:'lobby',r:0,t:0};JOINED={};
   app.innerHTML=hudHTML()
-   +'<section class="card"><h2>Teacher board</h2><p class="th">Room code: <b>'+esc(LIVE.code)+'</b></p>'
-   +'<div class="actions"><button type="button" class="go" data-act="qr">Show join QR</button><button type="button" class="go alt" id="clrbtn" data-act="clearroom">Clear board</button></div>'
-   +'<p class="th" id="hmsg" aria-live="polite">Cards appear here when a table sends one.</p></section>'
+   +'<section class="card"><div class="trow"><div><h2>Teacher board</h2><p class="th">Room code</p>'+codeBig()+'</div>'
+   +'<div class="actions"><button type="button" class="go" data-act="qr">Show join QR</button><button type="button" class="go alt" id="clrbtn" data-act="clearroom">Clear board</button></div></div></section>'
+   +'<section class="card"><h2 id="phT"></h2><div class="roomcode" id="phC" hidden></div><p class="ask" id="phD"></p><div class="actions" id="phA"></div></section>'
+   +'<p class="th" id="hmsg" aria-live="polite">Cards appear here when a table sends one.</p>'
    +'<div id="hlist"></div>';
+  renderPhase();
+  db('GET','/state').then(function(st){if(st&&st.phase){TS=st;}renderPhase();}).catch(function(){});
+  phT=setInterval(phaseTick,1000);
   var busy=false;
   function tick(){
     if(busy)return;busy=true;
+    db('GET','/joined').then(function(j){JOINED=compact(j);renderPhase();}).catch(function(){});
     db('GET','/tables').then(function(r){
-      busy=false;HOSTTAB=r||{};
+      busy=false;r=r||{};var nt={};Object.keys(r).forEach(function(q){if(r[q]&&r[q].img)nt[q]=r[q];});HOSTTAB=nt;
       var l=document.getElementById('hlist');if(!l)return;
-      var ks=Object.keys(HOSTTAB).sort(function(a,b){return a.localeCompare(b,undefined,{numeric:true});});
+      var ks=Object.keys(HOSTTAB).sort(numeric);
       document.getElementById('hmsg').textContent=ks.length?ks.length+' table(s) have sent a card.':'Cards appear here when a table sends one.';
+      renderPhase();
       l.innerHTML='<div class="tgrid">'+ks.map(function(k){var x=HOSTTAB[k];return '<section class="card"><h2>Table '+esc(k)+'</h2><img class="cardimg" src="'+esc(x.img||'')+'" alt="Card from table '+esc(k)+'"><div class="actions"><button type="button" class="go alt" data-act="showres" data-id="'+esc(k)+'">Show big</button></div></section>';}).join('')+'</div>';
     }).catch(function(){busy=false;var m=document.getElementById('hmsg');if(m)m.textContent='Cannot reach the server.';});
   }
@@ -827,12 +928,15 @@ function qrSvg(text){
   return '<svg viewBox="0 0 '+tot+' '+tot+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="QR code" style="width:100%;max-width:420px;height:auto;display:block;margin:6px auto;background:#fff"><path d="'+d+'" fill="#000" shape-rendering="crispEdges"/></svg>';
 }
 function joinLink(){
-  var base=location.href.split('#')[0].split('?')[0];
-  return base+(DB_URL?'?db='+DB_URL:'');
+  var base=location.href.split('#')[0].split('?')[0],q=[];
+  var m=(location.search.match(/[?&]db=([^&]+)/)||[])[1];
+  if(m)q.push('db='+m);
+  if(LIVE&&LIVE.code)q.push('room='+encodeURIComponent(LIVE.code));
+  return base+(q.length?'?'+q.join('&'):'');
 }
 function showQR(){
   var u=joinLink(),svg=qrSvg(u);
-  showBig(svg?'<h2>Scan to join</h2>'+svg+'<p class="th" style="word-break:break-all">'+esc(u)+'</p>':'<p class="why">The link is too long for a QR code here.</p>');
+  showBig(svg?'<h2>Scan to join</h2>'+(LIVE&&LIVE.host?'<p class="th">Or type the room code</p>'+codeBig():'')+svg+(LIVE&&LIVE.host?'':'<p class="th" style="word-break:break-all">'+esc(u)+'</p>'):'<p class="why">The link is too long for a QR code here.</p>');
 }
 
 /* ---------- events ---------- */
@@ -843,7 +947,7 @@ document.addEventListener('click',function(e){
   var b=e.target.closest('[data-act]');
   if(!b)return;
   var act=b.getAttribute('data-act');
-  if(act==='start'||act==='again'){startRound();}
+  if(act==='start'||act==='again'){if(act==='again'&&inLive()){renderWait('Round finished. Waiting for the next round\u2026');stuTick();}else{startRound();}}
   else if(act==='learn'){renderLearn();}
   else if(act==='qr'){showQR();}
   else if(act==='lnext'){LEARN.i=Math.min(LEARN.total-1,LEARN.i+1);showStep();}
@@ -851,9 +955,10 @@ document.addEventListener('click',function(e){
   else if(act==='reveal'){document.getElementById('lcard').classList.add('revealed');document.getElementById('pnote').hidden=false;b.hidden=true;}
   else if(act==='idea'){var p=document.getElementById('idea'+b.getAttribute('data-i'));p.hidden=!p.hidden;b.setAttribute('aria-expanded',p.hidden?'false':'true');b.textContent=p.hidden?'Show an idea':'Hide idea';}
   else if(act==='home'){stopTimer();pollStop();LIVE=null;renderHome();}
-  else if(act==='join'){if(readRoom(false))startRound();}
+  else if(act==='join'){if(readRoom(false))joinRoom();}
   else if(act==='joinscreen'){renderJoin();}
   else if(act==='teacher'){if(readRoom(true))renderTeacher();}
+  else if(act==='newroom'){newRoom();}
   else if(act==='clearroom'){if(!clearArmed){clearArmed=true;b.textContent='Press again to clear';}else{clearArmed=false;b.textContent='Clear board';db('DELETE','/tables').then(function(){HOSTTAB={};document.getElementById('hlist').innerHTML='';document.getElementById('hmsg').textContent='Board cleared.';}).catch(function(){});}}
   else if(act==='showres'){var x=HOSTTAB[b.getAttribute('data-id')];if(x)showBig('<img class="cardimg" src="'+esc(x.img||'')+'" alt="Card">','bigcard');}
   else if(act==='sendteacher'){sendToTeacher();}
@@ -871,7 +976,9 @@ document.addEventListener('click',function(e){
   else if(act==='towrite'){renderWrite();window.scrollTo(0,0);}
   else if(act==='present'){present();}
   else if(act==='closebig'){document.getElementById('big').hidden=true;}
-  else if(act==='mkcard'){composeCard(renderCard);}
+  else if(act==='mkcard'){SCR='composing';composeCard(renderCard);}
+  else if(act==='phnext'){nextPhase();}
+  else if(act==='phlobby'){setPhase('lobby',TS.r);}
   else if(act==='save'){saveCard();}
   else if(act==='poem'){openPoem();}
   else if(act==='closepoem'){closePoem();}
@@ -882,7 +989,7 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('input',function(e){if(e.target&&e.target.id==='sen'){writeCheck();}else if(e.target&&e.target.id==='otherv'){ME.verb=clean(e.target.value);writeCheck();}});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){closePoem();}});
-renderHome();
+if(ROOMQ&&DB_URL){renderJoin();}else{renderHome();}
 })();
 </script>
 </body>
