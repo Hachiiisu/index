@@ -264,7 +264,7 @@ html:not(.big) .stzart img.artimg{max-height:190px}
 .trow .roomcode{text-align:left;margin:0}
 .roomcode{font-family:var(--display);font-size:3.2rem;letter-spacing:.18em;text-align:center;margin:4px 0 10px;font-weight:800}
 </style>
-</head>
+<style>.trow2{display:flex;gap:18px;align-items:center}.qrbox{flex:0 0 190px;text-align:center}.qrbox svg{width:190px;height:190px;display:block;margin:0 auto}.qrbox .th{margin:2px 0 0;font-size:.8rem}.qrbox .roomcode{font-size:1.9rem;margin:0}.howcol{flex:1}.howcol h2{margin:0 0 6px}.how{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.hw{position:relative;border:2.5px solid #1c2b3a;border-radius:12px;background:#fffaf0;padding:8px 4px 6px;text-align:center}.hw svg{display:block;margin:0 auto 2px}.hw p{margin:0;font-weight:700;font-size:.85rem;line-height:1.15}.hw small{display:block;font-size:.78rem;color:#555}.hn{position:absolute;left:-6px;top:-8px;background:#f6c445;border:2px solid #1c2b3a;border-radius:50%;width:22px;height:22px;line-height:18px;font-size:.8rem}.howcol .actions{margin-top:8px}@media(max-width:700px){.trow2{flex-direction:column}.how{grid-template-columns:repeat(2,1fr)}}</style><style>.why b{background:#f6c445;padding:1px 6px;border-radius:6px}</style></head>
 <body>
 <div class="bar">
   <div class="brand">Give It a Life</div>
@@ -470,7 +470,9 @@ function renderHome(){
 function newMe(){
   return {thing:pickOne(THINGS),action:pickOne(ACTIONS),drawUrl:null,drawBlob:null,src:null,sentence:'',verb:'',cardUrl:null,cardBlob:null};
 }
-function startRound(){
+var DRAWLEFT=0;
+function startRound(sec){
+  DRAWLEFT=sec||0;
   if(ME){[ME.drawUrl,ME.cardUrl].forEach(function(u){if(u){try{URL.revokeObjectURL(u);}catch(e){}}});}
   ME=newMe();renderDraw();
 }
@@ -484,7 +486,7 @@ function renderDraw(){
    +'<div class="deal"><small>Its human action or feeling</small><strong id="action">'+esc(ME.action)+'</strong><button type="button" class="mini" data-act="newaction">New one</button></div></div>'
    +'<p class="ask">Draw your thing as a little character showing that action or feeling. Big face, thick lines. A wobbly doodle is perfect!</p>'
    +'<p class="th"><b>Add a tiny scene:</b> where is it? What is around it? Your friend will write a story from your picture, so do not tell them anything else.</p>'
-   +'<div class="timer" id="timer"><i id="tbar"></i></div><div class="tlabel" id="tlabel" aria-hidden="true">150s</div>'
+   +'<div class="timer" id="timer"><i id="tbar"></i></div><div class="tlabel" id="tlabel" aria-hidden="true">'+(DRAWLEFT||120)+'s</div>'
    +'<div class="canvaswrap"><canvas id="pad" width="640" height="480" role="img" aria-label="Drawing area. Draw with your finger or mouse."></canvas></div>'
    +'<div class="tools2" role="group" aria-label="Drawing tools">'
    +colors.map(function(x,i){return '<button type="button" class="sw" style="--c:'+x[0]+'" data-act="color" data-c="'+x[0]+'" aria-label="'+x[1]+' pen" aria-pressed="'+(i===0)+'"></button>';}).join('')
@@ -497,7 +499,7 @@ function renderDraw(){
    +'<button type="button" class="mini" data-act="clear">Clear</button></div>'
    +'<div class="actions"><button type="button" class="go" data-act="drawdone">Done drawing</button></div></section>';
   setupCanvas();
-  startTimer(150,function(){finishDraw();});
+  startTimer(DRAWLEFT||120,function(){finishDraw();});
 }
 function setupCanvas(){
   var c=document.getElementById('pad'),x=c.getContext('2d');
@@ -560,7 +562,7 @@ function renderWrite(){
   stopTimer();SCR='write';
   app.innerHTML='<div class="hud"><span class="chip">Round</span><button type="button" class="tbtn" data-act="home">Exit</button></div>'+stepsHTML(2)
    +'<section class="card"><h2>Friend: write one beautiful sentence</h2>'
-   +'<div class="timer" id="timer"><i id="tbar"></i></div><div class="tlabel" id="tlabel" aria-hidden="true">120s</div>'
+   +'<div class="timer" id="timer"><i id="tbar"></i></div><div class="tlabel" id="tlabel" aria-hidden="true">90s</div>'
    +'<img class="thumb" src="'+ME.drawUrl+'" width="480" height="360" alt="Your friend\'s drawing">'
    +'<p class="ask">Hint: <b>'+esc(ME.thing)+'</b> + <b>'+esc(ME.action)+'</b>. Look at the picture and write the rest in <b>your own</b> words.</p>'
    +'<label class="capl" for="sen">Your sentence</label>'
@@ -578,7 +580,7 @@ function renderWrite(){
     else{document.querySelector('[data-act="verbother"]').setAttribute('aria-pressed','true');document.getElementById('otherwrap').hidden=false;document.getElementById('otherv').value=ME.verb;}
   }
   writeCheck();
-  startTimer(120,autoFinishWrite);
+  startTimer(90,autoFinishWrite);
 }
 function autoFinishWrite(){
   if(SCR!=='write')return;
@@ -658,8 +660,8 @@ function renderCard(){
    +'<p class="th" id="cardkb" style="text-align:center">'+kb+' KB</p>'
    +'<div class="actions"><button type="button" class="go alt savebtn" data-act="save" hidden>Save card</button>'+'<button type="button" class="go" data-act="sendteacher">Send to teacher</button>'+''
    +'<button type="button" class="go" data-act="present">Show big</button>'
-   +'<button type="button" class="go alt" data-act="again">Make another</button></div>'
-   +'<p class="why">'+(LIVE&&!LIVE.host?'Table team: pick your best card and press Send to teacher. One card per table.':DB_URL?'Want to send this to the teacher? Go Home, join your table, then make the card again.':'Hand the phone back to the drawer. Drawer: read the sentence aloud. Does it match your picture?')+'</p>'
+   +(inLive()?'':'<button type="button" class="go alt" data-act="again">Make another</button>')+'</div>'
+   +'<p class="why">'+(LIVE&&!LIVE.host?'<b>ONE person sends for the whole table.</b> Sending again replaces your table\u2019s card. Send within 1 minute. To keep your own card, press and hold the picture to save it.':DB_URL?'Want to send this to the teacher? Go Home, join your table, then make the card again.':'Hand the phone back to the drawer. Drawer: read the sentence aloud. Does it match your picture?')+'</p>'
    +'<p class="th" id="savemsg" aria-live="polite" style="margin-top:8px"></p></section>';
   showSaves();
   if(!DL){document.getElementById('savemsg').textContent='Tip: press and hold the card to save it.';}
@@ -685,7 +687,7 @@ function present(){
 var DB_URL=(window.GIVE_DB||(((location.search||'').match(/[?&]db=([^&]+)/)||[])[1]?decodeURIComponent((location.search.match(/[?&]db=([^&]+)/))[1]):'')||'https://give-it-a-life-default-rtdb.asia-southeast1.firebasedatabase.app');
 var LIVE=null, pollT=null, HOSTTAB={}, clearArmed=false;
 var SCR='', stuT=null, stBusy=false, phT=null, JOINED={}, TS={phase:'lobby',r:0,t:0};
-var ORDER=['draw','pass','write','done'], LEN=/[?&]fast/.test(location.search)?{draw:6,pass:3,write:6}:{draw:150,pass:30,write:120};
+var ORDER=['draw','pass','write','done'], LEN=/[?&]fast/.test(location.search)?{draw:6,pass:3,write:6,done:12}:{draw:120,pass:15,write:90,done:60};
 function inLive(){return !!(LIVE&&!LIVE.host&&LIVE.table);}
 function compact(r){var o={};Object.keys(r||{}).forEach(function(k){if(r[k])o[k]=r[k];});return o;}
 function numeric(a,b){return a.localeCompare(b,undefined,{numeric:true});}
@@ -711,15 +713,21 @@ function codeBig(){return '<div class="roomcode" aria-label="Room code">'+esc(LI
 function stuStop(){if(stuT){clearInterval(stuT);stuT=null;}}
 function pollStop(){if(pollT){clearInterval(pollT);pollT=null;}if(phT){clearInterval(phT);phT=null;}stuStop();}
 function stuStart(){stuStop();stuT=setInterval(stuTick,1500);stuTick();}
+var lastHB=0,FROZEN=false,TICK=null;
 function stuTick(){
   if(!inLive()||stBusy)return;stBusy=true;
+  if(Date.now()-lastHB>8000){lastHB=Date.now();db('PUT','/joined/'+LIVE.table+'/'+LIVE.dev,{t:Date.now()}).catch(function(){});}
   db('GET','/state').then(function(st){stBusy=false;if(inLive())onState(st||{phase:'lobby',r:0});})
    .catch(function(){stBusy=false;var m=document.getElementById('waitmsg');if(m)m.textContent='Cannot reach the server. Check Wi-Fi.';});
 }
 function onState(st){
   var ph=st.phase,r=st.r||0;
   if(SCR==='wait'){
-    if(ph==='draw'&&r!==LIVE.r){LIVE.r=r;startRound();}
+    if(ph==='draw'&&r!==LIVE.r){
+      var rem=Math.round(LEN.draw-(Date.now()-(st.t||Date.now()))/1000);
+      if(rem>=Math.min(8,LEN.draw*0.5)){LIVE.r=r;startRound(Math.min(rem,LEN.draw));}
+      else{var wm=document.getElementById('waitmsg');if(wm)wm.textContent='A round is already running. Wait for the next one.';}
+    }
   }else if(LIVE.r===r){
     if(ph==='pass'&&SCR==='draw'){finishDraw();}
     else if(ph==='write'){
@@ -731,7 +739,7 @@ function onState(st){
 function joinRoom(){
   var m=document.getElementById('livemsg');if(m)m.textContent='Joining\u2026';
   LIVE.r=-1;
-  db('PUT','/joined/'+LIVE.table,{t:Date.now()}).then(function(){renderWait();stuStart();})
+  db('PUT','/joined/'+LIVE.table+'/'+LIVE.dev,{t:Date.now()}).then(function(){renderWait();stuStart();})
    .catch(function(){if(m)m.textContent='Cannot reach the server. Check Wi-Fi, or press Just draw below.';});
 }
 function renderWait(note){
@@ -742,7 +750,8 @@ function renderWait(note){
    +'<p class="why">Keep this screen open. Everything starts by itself.</p><p class="th" id="waitmsg" aria-live="polite"></p></section>';
   window.scrollTo(0,0);
 }
-function setPhase(ph,r){TS={phase:ph,r:r,t:Date.now()};db('PUT','/state',TS).catch(function(){});renderPhase();}
+function freezeBoard(){FROZEN=true;var m=document.getElementById('hmsg');if(m)m.textContent='Board stopped. '+Object.keys(HOSTTAB).length+' card(s) on screen. No more downloads.';renderPhase();}
+function setPhase(ph,r){if(ph!=='done')FROZEN=false;TS={phase:ph,r:r,t:Date.now()};db('PUT','/state',TS).catch(function(){});renderPhase();}
 function nextPhase(){
   var i=ORDER.indexOf(TS.phase);
   if(TS.phase==='lobby')setPhase('draw',(TS.r||0)+1);
@@ -751,23 +760,30 @@ function nextPhase(){
 function phaseLeft(){return LEN[TS.phase]?Math.max(0,LEN[TS.phase]-Math.floor((Date.now()-TS.t)/1000)):0;}
 function phaseTick(){
   if(!LEN[TS.phase])return;
-  if(Date.now()-TS.t>=LEN[TS.phase]*1000){nextPhase();return;}
+  if(Date.now()-TS.t>=LEN[TS.phase]*1000){if(TS.phase==='done'){if(!FROZEN)freezeBoard();return;}nextPhase();return;}
   var c=document.getElementById('phC');if(c)c.textContent=fmt(phaseLeft());
+}
+function liveDevs(){
+  var all=[],o={};
+  Object.keys(JOINED).forEach(function(k){var v=JOINED[k];if(v&&typeof v.t==='number'){all.push([k,v.t]);}else Object.keys(compact(v)).forEach(function(d){var x=v[d];all.push([k,x&&x.t||0]);});});
+  var mx=all.reduce(function(a,x){return Math.max(a,x[1]);},0);
+  all.forEach(function(x){if(mx-x[1]<=30000)o[x[0]]=(o[x[0]]||0)+1;});
+  return o;
 }
 function renderPhase(){
   var T=document.getElementById('phT');if(!T)return;
-  var ph=TS.phase,nJ=Object.keys(JOINED).length,nC=Object.keys(HOSTTAB).length;
+  var LD=liveDevs(),ph=TS.phase,nJ=Object.keys(LD).length,nC=Object.keys(HOSTTAB).length;
   var info={
-    lobby:['Lobby','Tables joined: '+nJ+(nJ?' ('+Object.keys(JOINED).sort(numeric).join(', ')+')':'')+'. Press Start when every table is in.'],
+    lobby:['Lobby','Tables joined: '+nJ+(nJ?' ('+Object.keys(LD).sort(numeric).join(', ')+')':'')+' \u00b7 Devices: '+Object.keys(LD).reduce(function(a,k){return a+LD[k];},0)+'. Press Start when every table is in.'],
     draw:['1 \u00b7 DRAW','Draw your thing as a little character showing its human action or feeling. Add a tiny scene. Do not tell your friend anything.'],
     pass:['2 \u00b7 PASS','Pass the phone to your friend on the LEFT. Friend: get ready to write!'],
     write:['3 \u00b7 WRITE','Friend: write ONE sentence in your own words. Use a human word.'],
-    done:['4 \u00b7 CARD','Time is up! Make your card, then press Send to teacher. Cards received: '+nC]
+    done:['4 \u00b7 CARD',FROZEN?'Board stopped. Showing '+nC+' card(s). Choose one to share.':'Time is up! One person per table: press Send to teacher within 1 minute. Cards received: '+nC+' of '+Math.max(nJ,nC)+' tables']
   }[ph]||['',''];
   T.textContent=info[0];document.getElementById('phD').textContent=info[1];
-  var c=document.getElementById('phC');c.hidden=!LEN[ph];if(LEN[ph])c.textContent=fmt(phaseLeft());
+  var c=document.getElementById('phC');c.hidden=!LEN[ph]||(ph==='done'&&FROZEN);if(LEN[ph])c.textContent=fmt(phaseLeft());
   document.getElementById('phA').innerHTML=ph==='lobby'?'<button type="button" class="go" data-act="phnext">Start round</button>'
-    :ph==='done'?'<button type="button" class="go" data-act="phlobby">New round</button>'
+    :ph==='done'?(FROZEN?'<button type="button" class="go alt" data-act="refresh">Refresh cards</button><button type="button" class="go alt" data-act="saveall">Save all</button>':'<button type="button" class="go alt" data-act="freeze">Stop now</button>')+'<button type="button" class="go" data-act="phlobby">New round</button>'
     :'<button type="button" class="go alt" data-act="phnext">Skip \u203a</button>';
 }
 function liveCard(){
@@ -782,7 +798,7 @@ function liveCard(){
 function renderJoin(){
   stopTimer();pollStop();
   app.innerHTML='<div class="hud"><span class="chip">Play</span><button type="button" class="tbtn" data-act="home">Exit</button></div>'+liveCard()
-   +(ROOMQ?'':'<section class="card"><h2>Teacher</h2><p class="why">Start a new room. Students scan the QR or type the room code.</p><div class="actions"><button type="button" class="go" data-act="newroom">Create room</button><button type="button" class="go alt" data-act="teacher">Reopen room</button></div><p class="th">Reopen: type the room code above first.</p></section>')
+   +(ROOMQ?'':'<section class="card"><h2>Teacher</h2><p class="why">Start a new room. Students scan the QR or type the room code.</p><div class="actions"><button type="button" class="go" data-act="newroom">Create room</button>'+(lastRoom()?'<button type="button" class="go" data-act="resume">Resume room '+esc(lastRoom().toUpperCase())+'</button>':'')+'<button type="button" class="go alt" data-act="teacher">Reopen room</button></div><p class="th" style="margin-top:14px">Reopen room: type the room code above first.</p></section>')
    +'<section class="card"><h2>No class server?</h2><p class="why">Just draw and pass the phone to a friend at your table.</p><div class="actions"><button type="button" class="go alt" data-act="start">Just draw</button></div></section>';
   window.scrollTo(0,0);
 }
@@ -791,7 +807,7 @@ function readRoom(host){
   var m=document.getElementById('livemsg');
   if(!code){m.textContent='Type a room code first.';return false;}
   if(!host&&!t){m.textContent='Type your table number.';return false;}
-  LIVE={code:code,table:t,host:!!host};
+  LIVE={code:code,table:t,host:!!host,dev:Math.random().toString(36).slice(2,8)};
   return true;
 }
 function hudHTML(){return '<div class="hud"><span class="chip">Class mode</span><button type="button" class="tbtn" data-act="home">Exit</button></div>';}
@@ -809,22 +825,38 @@ function sendToTeacher(){
   };
   fr.readAsDataURL(ME.cardBlob);
 }
+function howHTML(){
+  var I=function(d){return '<svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="#1c2b3a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>';};
+  var ic=[
+   I('<rect x="20" y="6" width="26" height="46" rx="5"/><rect x="26" y="14" width="6" height="6"/><rect x="34" y="14" width="6" height="6"/><rect x="26" y="22" width="6" height="6"/><path d="M36 26h4M26 34h14M26 40h8"/><path d="M8 36l8 8M8 44l8-8" stroke="#f6c445"/>'),
+   I('<circle cx="32" cy="34" r="20"/><path d="M32 22v13l9 6"/><path d="M22 8h20" stroke="#f6c445"/>'),
+   I('<path d="M12 52l4-14 28-28 10 10-28 28z"/><path d="M40 14l10 10" stroke="#f6c445"/><path d="M12 52l8-2"/>'),
+   I('<rect x="30" y="12" width="26" height="40" rx="5"/><path d="M26 32H6M14 24l-8 8 8 8" stroke="#f6c445"/>'),
+   I('<path d="M8 12h48v30H30l-12 10V42H8z"/><path d="M18 22h28M18 31h18" stroke="#f6c445"/>')];
+  var t=[['Scan & type your table number',''],['Wait for the teacher’s Start',''],['Draw a thing','no words · '+fmt(LEN.draw)],['Pass the phone LEFT',fmt(LEN.pass)],['Write a human action',fmt(LEN.write)]];
+  return '<div class="how">'+t.map(function(x,k){return '<div class="hw"><b class="hn">'+(k+1)+'</b>'+ic[k]+'<p>'+x[0]+'</p>'+(x[1]?'<small>'+x[1]+'</small>':'')+'</div>';}).join('')+'</div>';
+}
+function saveRoom(c){try{localStorage.setItem('give_room',JSON.stringify({c:c,t:Date.now()}));}catch(e){}}
+function lastRoom(){try{var o=JSON.parse(localStorage.getItem('give_room')||'null');return(o&&o.c&&Date.now()-o.t<864e5)?o.c:'';}catch(e){return '';}}
 function renderTeacher(){
-  stopTimer();pollStop();clearArmed=false;
+  stopTimer();pollStop();clearArmed=false;saveRoom(LIVE.code);
   TS={phase:'lobby',r:0,t:0};JOINED={};
   app.innerHTML=hudHTML()
-   +'<section class="card"><div class="trow"><div><h2>Teacher board</h2><p class="th">Room code</p>'+codeBig()+'</div>'
-   +'<div class="actions"><button type="button" class="go" data-act="qr">Show join QR</button><button type="button" class="go alt" id="clrbtn" data-act="clearroom">Clear board</button></div></div></section>'
+   +'<section class="card"><div class="trow2"><div class="qrbox">'+(qrSvg(joinLink())||'')+'<p class="th">Scan, or type room code</p>'+codeBig()+'</div>'
+   +'<div class="howcol"><h2>How to play</h2>'+howHTML()+'<div class="actions"><button type="button" class="go alt" data-act="qr">Big QR</button><button type="button" class="go alt" id="clrbtn" data-act="clearroom">Clear board</button></div></div></div></section>'
    +'<section class="card"><h2 id="phT"></h2><div class="roomcode" id="phC" hidden></div><p class="ask" id="phD"></p><div class="actions" id="phA"></div></section>'
    +'<p class="th" id="hmsg" aria-live="polite">Cards appear here when a table sends one.</p>'
    +'<div id="hlist"></div>';
   renderPhase();
-  db('GET','/state').then(function(st){if(st&&st.phase){TS=st;}renderPhase();}).catch(function(){});
+  db('GET','/state').then(function(st){if(st&&st.phase){TS=st;if(st.phase==='done'&&Date.now()-st.t>=LEN.done*1000){FROZEN=true;if(TICK)TICK(true);}}renderPhase();}).catch(function(){});
   phT=setInterval(phaseTick,1000);
   var busy=false;
-  function tick(){
-    if(busy)return;busy=true;
-    db('GET','/joined').then(function(j){JOINED=compact(j);renderPhase();}).catch(function(){});
+  function tick(force){
+    if(busy)return;
+    var want=force===true||(TS.phase==='done'&&!FROZEN);
+    if(!FROZEN)db('GET','/joined').then(function(j){JOINED=compact(j);renderPhase();}).catch(function(){});
+    if(!want)return;
+    busy=true;
     db('GET','/tables').then(function(r){
       busy=false;r=r||{};var nt={};Object.keys(r).forEach(function(q){if(r[q]&&r[q].img)nt[q]=r[q];});HOSTTAB=nt;
       var l=document.getElementById('hlist');if(!l)return;
@@ -834,7 +866,7 @@ function renderTeacher(){
       l.innerHTML='<div class="tgrid">'+ks.map(function(k){var x=HOSTTAB[k];return '<section class="card"><h2>Table '+esc(k)+'</h2><img class="cardimg thumbimg" data-act="showres" data-id="'+esc(k)+'" src="'+esc(x.img||'')+'" alt="Card from table '+esc(k)+'. Press to enlarge."><div class="actions"><button type="button" class="go alt mini" data-act="showres" data-id="'+esc(k)+'">Show big</button></div></section>';}).join('')+'</div>';
     }).catch(function(){busy=false;var m=document.getElementById('hmsg');if(m)m.textContent='Cannot reach the server.';});
   }
-  tick();pollT=setInterval(tick,5000);
+  TICK=tick;tick();pollT=setInterval(function(){tick();},5000);
 }
 function showBig(inner,cls){
   var m=document.getElementById('big');
@@ -949,7 +981,7 @@ document.addEventListener('click',function(e){
   else if(act==='lprev'){LEARN.i=Math.max(0,LEARN.i-1);showStep();}
   else if(act==='reveal'){document.getElementById('lcard').classList.add('revealed');document.getElementById('pnote').hidden=false;b.hidden=true;}
   else if(act==='idea'){var p=document.getElementById('idea'+b.getAttribute('data-i'));p.hidden=!p.hidden;b.setAttribute('aria-expanded',p.hidden?'false':'true');b.textContent=p.hidden?'Show an idea':'Hide idea';}
-  else if(act==='home'){stopTimer();pollStop();if(inLive()){var lv=LIVE;LIVE=null;fetch(DB_URL.replace(/\/$/,'')+'/rooms/'+encodeURIComponent(lv.code)+'/joined/'+encodeURIComponent(lv.table)+'.json',{method:'DELETE'}).catch(function(){});}LIVE=null;renderHome();}
+  else if(act==='home'){stopTimer();pollStop();if(inLive()){var lv=LIVE;LIVE=null;fetch(DB_URL.replace(/\/$/,'')+'/rooms/'+encodeURIComponent(lv.code)+'/joined/'+encodeURIComponent(lv.table)+'/'+encodeURIComponent(lv.dev)+'.json',{method:'DELETE'}).catch(function(){});}LIVE=null;renderHome();}
   else if(act==='join'){if(readRoom(false))joinRoom();}
   else if(act==='joinscreen'){renderJoin();}
   else if(act==='teacher'){if(readRoom(true))renderTeacher();}
@@ -972,8 +1004,12 @@ document.addEventListener('click',function(e){
   else if(act==='present'){present();}
   else if(act==='closebig'){document.getElementById('big').hidden=true;}
   else if(act==='mkcard'){SCR='composing';composeCard(renderCard);}
+  else if(act==='resume'){LIVE={code:lastRoom(),table:'',host:true};renderTeacher();}
   else if(act==='phnext'){nextPhase();}
-  else if(act==='phlobby'){setPhase('lobby',TS.r);}
+  else if(act==='phlobby'){FROZEN=false;HOSTTAB={};var hl=document.getElementById('hlist');if(hl)hl.innerHTML='';db('DELETE','/tables').catch(function(){});setPhase('lobby',TS.r);}
+  else if(act==='freeze'){freezeBoard();}
+  else if(act==='refresh'){if(TICK)TICK(true);}
+  else if(act==='saveall'){Object.keys(HOSTTAB).sort(numeric).forEach(function(k,i){setTimeout(function(){var a=document.createElement('a');a.href=HOSTTAB[k].img;a.download='table-'+k+'.jpg';document.body.appendChild(a);a.click();a.remove();},i*300);});}
   else if(act==='save'){saveCard();}
   else if(act==='poem'){openPoem();}
   else if(act==='closepoem'){closePoem();}
